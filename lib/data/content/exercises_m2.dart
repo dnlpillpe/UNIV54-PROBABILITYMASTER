@@ -705,7 +705,7 @@ const List<Exercise> kExercisesM2 = [
       'Imagina 1 000 correos: 200 spam y 800 legítimos.',
       'Compara los marcados que vienen de cada grupo.',
     ],
-  ),,
+  ),
   Exercise(
     id: 'm2_e27',
     moduleId: 'm2',

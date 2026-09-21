@@ -1126,9 +1126,9 @@ class _UrnLabState extends State<UrnLab> {
     final pR = _red / total;
     final pA = _blue / total;
     final secondRedAfterRed =
-        _replace ? pR : (total - 1 == 0 ? 0 : (_red - 1) / (total - 1));
+        _replace ? pR : (total - 1 == 0 ? 0.0 : (_red - 1) / (total - 1));
     final secondRedAfterBlue =
-        _replace ? pR : (total - 1 == 0 ? 0 : _red / (total - 1));
+        _replace ? pR : (total - 1 == 0 ? 0.0 : _red / (total - 1));
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [

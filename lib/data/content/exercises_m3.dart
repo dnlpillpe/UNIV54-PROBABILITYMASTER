@@ -615,7 +615,7 @@ const List<Exercise> kExercisesM3 = [
               'elegido sea equiprobable y que se cuente igual arriba y '
               'abajo.'),
     ],
-  ),,
+  ),
   Exercise(
     id: 'm3_e25',
     moduleId: 'm3',

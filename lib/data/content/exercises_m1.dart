@@ -672,7 +672,7 @@ const List<Exercise> kExercisesM1 = [
           feedback: 'Con ese criterio, ganar la lotería sería 50 %: o toca o '
               'no toca.'),
     ],
-  ),,
+  ),
   Exercise(
     id: 'm1_e25',
     moduleId: 'm1',
