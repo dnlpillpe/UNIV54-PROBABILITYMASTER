@@ -1,0 +1,112 @@
+name: Build APK
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      build_mode:
+        description: "Modo de compilación"
+        required: false
+        default: "release"
+        type: choice
+        options: [release, debug]
+
+env:
+  FLUTTER_VERSION: "3.35.4"
+  JAVA_VERSION: "17"
+
+jobs:
+  build:
+    name: APK Android
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Verificar el contenido antes de compilar
+        run: |
+          python3 tool/verify_content.py
+          python3 tool/static_check.py
+
+      - name: Generar carpetas de plataforma
+        run: |
+          flutter create --platforms=android,ios \
+            --project-name probability_master \
+            --org com.probabilitymaster .
+
+      - name: Ajustes posteriores a flutter create
+        run: bash tool/postcreate.sh
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Generar iconos de la app
+        run: dart run flutter_launcher_icons
+
+      # Los tests son informativos en este workflow: un test roto no debe
+      # impedir un APK de campo, pero sí debe verse en el registro.
+      - name: Tests (informativos)
+        run: flutter test --reporter compact || true
+        continue-on-error: true
+
+      - name: Configurar firma si hay secretos
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: bash tool/configure_signing.sh
+
+      - name: Compilar APK universal
+        run: flutter build apk --release --build-name=1.0.0 --build-number=${{ github.run_number }}
+
+      - name: Compilar APK por arquitectura
+        run: flutter build apk --release --split-per-abi
+
+      - name: Renombrar artefactos
+        run: |
+          mkdir -p artifacts
+          cp build/app/outputs/flutter-apk/app-release.apk \
+             artifacts/ProbabilityMaster-universal.apk
+          for f in build/app/outputs/flutter-apk/app-*-release.apk; do
+            [ -e "$f" ] || continue
+            base=$(basename "$f")
+            case "$base" in
+              app-release.apk) continue ;;
+            esac
+            abi=$(echo "$base" | sed 's/app-\(.*\)-release.apk/\1/')
+            cp "$f" "artifacts/ProbabilityMaster-$abi.apk"
+          done
+          ls -la artifacts
+
+      - name: Publicar artefactos
+        uses: actions/upload-artifact@v4
+        with:
+          name: probability-master-apk
+          path: artifacts/*.apk
+          retention-days: 30
+
+      - name: Crear release en etiquetas v*
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

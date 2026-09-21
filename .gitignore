@@ -1,0 +1,19 @@
+.dart_tool/
+.packages
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.lock
+*.iml
+.idea/
+.vscode/
+.DS_Store
+
+# La carpeta android/ se genera en CI con `flutter create` y se parchea con
+# ci/android-overrides/. Ver docs/05_CI_CD.md.
+android/
+ios/
+linux/
+macos/
+windows/
+web/

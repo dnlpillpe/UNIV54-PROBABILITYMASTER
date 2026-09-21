@@ -1,0 +1,20 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  errors:
+    # El contenido educativo usa comillas tipográficas y líneas largas en
+    # cadenas: no es un error de estilo que deba frenar una compilación.
+    lines_longer_than_80_chars: ignore
+    avoid_print: warning
+  exclude:
+    - "**/*.g.dart"
+    - "build/**"
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_final_locals: false
+    avoid_unnecessary_containers: false
+    use_super_parameters: true
+    require_trailing_commas: false

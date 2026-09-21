@@ -1,0 +1,79 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.35.4"
+  JAVA_VERSION: "17"
+
+jobs:
+  # ------------------------------------------------------------------
+  # 1 · Contenido: se verifica ANTES de tocar Flutter.
+  # Recalcula todas las cifras con una réplica del motor en Python y
+  # comprueba la integridad referencial del catálogo. Es rápido y atrapa
+  # los errores más caros sin instalar nada.
+  # ------------------------------------------------------------------
+  contenido:
+    name: Contenido y verificación estática
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Comprobaciones internas del motor replicado
+        run: python3 tool/probability_core.py
+
+      - name: Recalcular todas las cifras del contenido
+        run: python3 tool/verify_content.py
+
+      - name: Verificación estática de Dart (sin SDK)
+        run: python3 tool/static_check.py
+
+  # ------------------------------------------------------------------
+  # 2 · Análisis y pruebas con el SDK real.
+  # ------------------------------------------------------------------
+  analyze_test:
+    name: Analyze y tests
+    runs-on: ubuntu-latest
+    needs: contenido
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Generar carpetas de plataforma
+        run: |
+          flutter create --platforms=android,ios \
+            --project-name probability_master \
+            --org com.probabilitymaster .
+
+      - name: Ajustes posteriores a flutter create
+        run: bash tool/postcreate.sh
+
+      - name: Dependencias
+        run: flutter pub get
+
+      - name: Generar iconos de la app
+        run: dart run flutter_launcher_icons
+
+      - name: Analyze
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Tests
+        run: flutter test --reporter expanded
